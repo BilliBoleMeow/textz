@@ -419,7 +419,7 @@ Make sure you still mount the repo folder and installed the docker from official
 ------
 
 <details>
-  <summary><h3>Build And Run The Docker Image Using Official Docker Commands</h3></summary>
+  <summary><h3>Using Official Docker Commands</h3></summary>
 
 - Build Docker image:
 
@@ -448,7 +448,7 @@ sudo docker stop id
 </details>
 
 <details>
-  <summary><h3>Build And Run The Docker Image Using docker-compose</h3></summary>
+  <summary><h3>Using Docker Compose Plugin</h3></summary>
 
 - Install docker compose plugin
 
@@ -540,6 +540,8 @@ cancelall - Cancel all tasks
 forcestart - or /fs to start task from queue
 del - Delete file/folder from GDrive
 log - Get the Bot Log
+auth - Authorize user or chat
+unauth - Unauthorize uer or chat
 shell - Run commands in Shell
 aexec - Execute async function
 exec - Execute sync function
