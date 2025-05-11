@@ -4,8 +4,9 @@ from os import walk, path as ospath
 from secrets import token_urlsafe
 from aioshutil import move, rmtree
 from pyrogram.enums import ChatAction
-from re import sub, I
+from re import sub, I, findall
 from shlex import split
+from collections import Counter
 
 from .. import (
     user_data,
@@ -218,22 +219,32 @@ class TaskConfig:
         if self.ffmpeg_cmds and not isinstance(self.ffmpeg_cmds, list):
             if self.user_dict.get("FFMPEG_CMDS", None):
                 ffmpeg_dict = self.user_dict["FFMPEG_CMDS"]
-                self.ffmpeg_cmds = [
-                    value
-                    for key in list(self.ffmpeg_cmds)
-                    if key in ffmpeg_dict
-                    for value in ffmpeg_dict[key]
-                ]
             elif "FFMPEG_CMDS" not in self.user_dict and Config.FFMPEG_CMDS:
                 ffmpeg_dict = Config.FFMPEG_CMDS
-                self.ffmpeg_cmds = [
-                    value
-                    for key in list(self.ffmpeg_cmds)
-                    if key in ffmpeg_dict
-                    for value in ffmpeg_dict[key]
-                ]
             else:
-                self.ffmpeg_cmds = None
+                ffmpeg_dict = None
+            if ffmpeg_dict is None:
+                self.ffmpeg_cmds = ffmpeg_dict
+            else:
+                cmds = []
+                for key in list(self.ffmpeg_cmds):
+                    if isinstance(key, tuple):
+                        cmds.extend(list(key))
+                    elif key in ffmpeg_dict.keys():
+                        for ind, vl in enumerate(ffmpeg_dict[key]):
+                            if variables := set(findall(r"\{(.*?)\}", vl)):
+                                ff_values = (
+                                    self.user_dict.get("FFMPEG_VARIABLES", {})
+                                    .get(key, {})
+                                    .get(str(ind), {})
+                                )
+                                if Counter(list(variables)) == Counter(
+                                    list(ff_values.keys())
+                                ):
+                                    cmds.append(vl.format(**ff_values))
+                            else:
+                                cmds.append(vl)
+                self.ffmpeg_cmds = cmds
 
         if not self.is_leech:
             self.stop_duplicate = (
@@ -574,7 +585,7 @@ class TaskConfig:
         except:
             await send_message(
                 self.message,
-                "Reply to text file or to telegram message that have links seperated by new line!",
+                "Reply to text file or to telegram message that have links separated by new line!",
             )
 
     async def proceed_extract(self, dl_path, gid):
