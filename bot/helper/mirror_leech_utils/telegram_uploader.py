@@ -6,7 +6,7 @@ from natsort import natsorted
 from os import walk, path as ospath
 from time import time
 from re import match as re_match, sub as re_sub
-from pyrogram.errors import FloodWait, RPCError, FloodPremiumWait, BadRequest
+from pyrogram.errors import FloodWait, RPCError, BadRequest
 from aiofiles.os import (
     remove,
     path as aiopath,
@@ -40,6 +40,10 @@ from ..ext_utils.media_utils import (
 
 LOGGER = getLogger(__name__)
 
+try:
+    from pyrogram.errors import FloodPremiumWait
+except ImportError:
+    FloodPremiumWait = FloodWait
 
 class TelegramUploader:
     def __init__(self, listener, path):

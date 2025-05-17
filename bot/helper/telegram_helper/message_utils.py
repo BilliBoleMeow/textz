@@ -1,5 +1,5 @@
 from asyncio import sleep
-from pyrogram.errors import FloodWait, FloodPremiumWait
+from pyrogram.errors import FloodWait
 from re import match as re_match
 from time import time
 
@@ -9,6 +9,11 @@ from ...core.mltb_client import TgClient
 from ..ext_utils.bot_utils import SetInterval
 from ..ext_utils.exceptions import TgLinkException
 from ..ext_utils.status_utils import get_readable_message
+
+try:
+    from pyrogram.errors import FloodPremiumWait
+except ImportError:
+    FloodPremiumWait = FloodWait
 
 
 async def send_message(message, text, buttons=None, block=True):

@@ -1,6 +1,6 @@
 from asyncio import Lock, sleep
 from time import time
-from pyrogram.errors import FloodWait, FloodPremiumWait
+from pyrogram.errors import FloodWait
 
 from .... import (
     LOGGER,
@@ -16,6 +16,10 @@ from ...telegram_helper.message_utils import send_status_message
 global_lock = Lock()
 GLOBAL_GID = set()
 
+try:
+    from pyrogram.errors import FloodPremiumWait
+except ImportError:
+    FloodPremiumWait = FloodWait
 
 class TelegramDownloadHelper:
     def __init__(self, listener):
