@@ -1,5 +1,5 @@
 from aiofiles.os import remove, path as aiopath
-from asyncio import sleep, TimeoutError
+from asyncio import sleep, TimeoutError # sleep is already imported, good.
 from time import time
 from aiohttp.client_exceptions import ClientError
 from aioqbt.exc import AQError
@@ -46,7 +46,7 @@ async def _on_seed_finish(tor):
     ext_hash = tor.hash
     LOGGER.info(f"Cancelling Seed: {tor.name}")
     if task := await get_task_by_gid(ext_hash[:12]):
-        msg = f"Seeding stopped with Ratio: {round(tor.ratio, 3)} and Time: {get_readable_time(int(tor.seeding_time.total_seconds() or "0"))}"
+        msg = f"Seeding stopped with Ratio: {round(tor.ratio, 3)} and Time: {get_readable_time(int(tor.seeding_time.total_seconds() or '0'))}"
         await task.listener.on_upload_error(msg)
     await _remove_torrent(ext_hash, tor.tags[0])
 
@@ -60,7 +60,7 @@ async def _stop_duplicate(tor):
             ]
             msg, button = await stop_duplicate_check(task.listener)
             if msg:
-                _on_download_error(msg, tor, button)
+                await _on_download_error(msg, tor, button)
 
 
 @new_task
@@ -78,8 +78,8 @@ async def _on_download_complete(tor):
                 if f.priority == 0 and await aiopath.exists(f"{path}/{f.name}"):
                     try:
                         await remove(f"{path}/{f.name}")
-                    except:
-                        pass
+                    except Exception as e:
+                        LOGGER.error(f"Failed to remove unwanted file {f.name}: {e}")
         await task.listener.on_download_complete()
         if intervals["stopAll"]:
             return
@@ -107,6 +107,23 @@ async def _on_download_complete(tor):
     else:
         await _remove_torrent(ext_hash, tag)
 
+
+async def remove_trackers_from_torrent(torrent_hash: str):
+    """
+    Removes all trackers from a given qBittorrent torrent using its API.
+    This modifies the torrent's state within qBittorrent, not the .torrent file on disk.
+    """
+    try:
+        LOGGER.info(f"Attempting to remove trackers for hash: {torrent_hash}")
+        await TorrentManager.qbittorrent.torrents.edit_torrent(
+            hashes=[torrent_hash],
+            trackers=""
+        )
+        LOGGER.info(f"Successfully removed trackers for hash: {torrent_hash}")
+    except AQError as e:
+        LOGGER.error(f"Failed to remove trackers for {torrent_hash} via API: {e}")
+    except Exception as e:
+        LOGGER.error(f"An unexpected error occurred while removing trackers for {torrent_hash}: {e}")
 
 @new_task
 async def _qb_listener():
@@ -195,7 +212,7 @@ async def _qb_listener():
         await sleep(3)
 
 
-async def on_download_start(tag):
+async def on_download_start(tag, torrent_hash):
     async with qb_listener_lock:
         qb_torrents[tag] = {
             "start_time": time(),
@@ -205,5 +222,12 @@ async def on_download_start(tag):
             "uploaded": False,
             "seeding": False,
         }
+        # Add a 1-second sleep here
+        LOGGER.info(f"Delaying tracker removal for 1 second for hash: {torrent_hash}")
+        await sleep(1) # The added delay
+
+        # Call the function to remove trackers using the qBittorrent API
+        await remove_trackers_from_torrent(torrent_hash)
+
         if not intervals["qb"]:
             intervals["qb"] = await _qb_listener()
